@@ -9,27 +9,28 @@ from model import resnet34
 
 
 def main():
+    # Set the device to GPU if available, otherwise use CPU
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+    # Define the image transformation pipeline (resize, center crop, normalize)
     data_transform = transforms.Compose(
         [transforms.Resize(256),
          transforms.CenterCrop(224),
          transforms.ToTensor(),
          transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
 
-    # load image
-    # 指向需要遍历预测的图像文件夹
+    # Set the root path for the test images
     imgs_root = "./data_set/flower_data/test_batch_predict"
     assert os.path.exists(imgs_root), f"file: '{imgs_root}' dose not exist."
-    # 读取指定文件夹下所有jpg图像路径
+
+    # Collect all .jpg image paths from the test directory
     img_path_list = [os.path.join(imgs_root, i) for i in os.listdir(imgs_root) if i.endswith(".jpg")]
 
-    # read class_indict
+    # Load the class indices mapping from a JSON file
     json_path = './class_indices.json'
     assert os.path.exists(json_path), f"file: '{json_path}' dose not exist."
-
     json_file = open(json_path, "r")
-    class_indict = json.load(json_file)
+    class_indict = json.load(json_file) # Load the class-to-index mapping
 
     # create model
     model = resnet34(num_classes=5).to(device)
@@ -37,28 +38,35 @@ def main():
     # load model weights
     weights_path = "./resNet34.pth"
     assert os.path.exists(weights_path), f"file: '{weights_path}' dose not exist."
-    model.load_state_dict(torch.load(weights_path, map_location=device))
+    model.load_state_dict(torch.load(weights_path, map_location=device)) # Load the weights into the model
 
     # prediction
     model.eval()
-    batch_size = 8  # 每次预测时将多少张图片打包成一个batch
-    with torch.no_grad():
+
+    batch_size = 8  # batches in each prediction epoch
+
+    # Perform batch prediction
+    with torch.no_grad():  # Disable gradient computation for inference (saves memory)
         for ids in range(0, len(img_path_list) // batch_size):
+            # List to hold a batch of images
             img_list = []
+
+            # Load and preprocess the images in the current batch
             for img_path in img_path_list[ids * batch_size: (ids + 1) * batch_size]:
                 assert os.path.exists(img_path), f"file: '{img_path}' dose not exist."
-                img = Image.open(img_path)
-                img = data_transform(img)
-                img_list.append(img)
+                img = Image.open(img_path) # Open the image file
+                img = data_transform(img)  # Apply the defined transformations
+                img_list.append(img) # Add the processed image to the batch list
 
-            # batch img
-            # 将img_list列表中的所有图像打包成一个batch
+            # Stack the list of images into a single batch tensor
             batch_img = torch.stack(img_list, dim=0)
-            # predict class
-            output = model(batch_img.to(device)).cpu()
-            predict = torch.softmax(output, dim=1)
-            probs, classes = torch.max(predict, dim=1)
 
+            # Perform the prediction on the batch
+            output = model(batch_img.to(device)).cpu() # Run the model on the batch and move output to CPU
+            predict = torch.softmax(output, dim=1) # Apply softmax
+            probs, classes = torch.max(predict, dim=1)  # Get the predicted class and probability
+
+            # Print the predictions for each image in the current batch
             for idx, (pro, cla) in enumerate(zip(probs, classes)):
                 print("image: {}  class: {}  prob: {:.3}".format(img_path_list[ids * batch_size + idx],
                                                                  class_indict[str(cla.numpy())],

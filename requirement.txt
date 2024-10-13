@@ -1,6 +1,17 @@
 # Python versions
-python_version >=3.6, <=3.8
+# python_version >=3.6, <=3.8
 
 torch==1.10.0
 torchvision==0.11.1
 tensorflow==2.4.1
+
+# commands
+# set conda environment
+#conda create -n resnet-image-classification python=3.8 pytorch::pytorch=1.10.0 pytorch::
+=0.11.1
+
+# install tqdm for training
+#conda install conda-forge::tqdm
+
+# install matplotlib
+#conda install conda-forge::matplotlib

@@ -45,6 +45,8 @@ def main():
 
     batch_size = 8  # batches in each prediction epoch
 
+    f = open("data_set/predict_results.txt","w")
+
     # Perform batch prediction
     with torch.no_grad():  # Disable gradient computation for inference (saves memory)
         for ids in range(0, len(img_path_list) // batch_size):
@@ -72,6 +74,11 @@ def main():
                                                                  class_indict[str(cla.numpy())],
                                                                  pro.numpy()))
 
+                # write the records of prediction; image path, predict class, probability
+                f.writelines("image: {}  class: {}  prob: {:.3}\n".format(img_path_list[ids * batch_size + idx],
+                                                                 class_indict[str(cla.numpy())],
+                                                                 pro.numpy()))
+            f.close()
 
 if __name__ == '__main__':
     main()
